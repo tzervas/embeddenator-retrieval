@@ -46,7 +46,7 @@ impl Resonator {
     /// # Examples
     ///
     /// ```
-    /// use embeddenator::resonator::Resonator;
+    /// use embeddenator_retrieval::resonator::Resonator;
     ///
     /// let resonator = Resonator::new();
     /// assert_eq!(resonator.max_iterations, 10);
@@ -66,14 +66,10 @@ impl Resonator {
     /// # Examples
     ///
     /// ```
-    /// use embeddenator::resonator::Resonator;
-    /// use embeddenator::{ReversibleVSAConfig, SparseVec};
+    /// use embeddenator_retrieval::resonator::Resonator;
+    /// use embeddenator_vsa::SparseVec;
     ///
-    /// let cfg = ReversibleVSAConfig::default();
-    /// let codebook = vec![
-    ///     SparseVec::encode_data(b"pattern1", &cfg, None),
-    ///     SparseVec::encode_data(b"pattern2", &cfg, None),
-    /// ];
+    /// let codebook = vec![SparseVec::from_data(b"pattern1"), SparseVec::from_data(b"pattern2")];
     /// let resonator = Resonator::with_params(codebook, 20, 0.0001);
     /// assert_eq!(resonator.max_iterations, 20);
     /// ```
@@ -100,12 +96,11 @@ impl Resonator {
     /// # Examples
     ///
     /// ```
-    /// use embeddenator::resonator::Resonator;
-    /// use embeddenator::{ReversibleVSAConfig, SparseVec};
+    /// use embeddenator_retrieval::resonator::Resonator;
+    /// use embeddenator_vsa::SparseVec;
     ///
-    /// let cfg = ReversibleVSAConfig::default();
-    /// let clean = SparseVec::encode_data(b"hello", &cfg, None);
-    /// let codebook = vec![clean.clone(), SparseVec::encode_data(b"world", &cfg, None)];
+    /// let clean = SparseVec::from_data(b"hello");
+    /// let codebook = vec![clean.clone(), SparseVec::from_data(b"world")];
     /// let resonator = Resonator::with_params(codebook, 10, 0.001);
     ///
     /// // Clean input should project to itself
@@ -146,12 +141,11 @@ impl Resonator {
     /// # Examples
     ///
     /// ```
-    /// use embeddenator::resonator::Resonator;
-    /// use embeddenator::{ReversibleVSAConfig, SparseVec};
+    /// use embeddenator_retrieval::resonator::Resonator;
+    /// use embeddenator_vsa::SparseVec;
     ///
-    /// let cfg = ReversibleVSAConfig::default();
-    /// let factor1 = SparseVec::encode_data(b"hello", &cfg, None);
-    /// let factor2 = SparseVec::encode_data(b"world", &cfg, None);
+    /// let factor1 = SparseVec::from_data(b"hello");
+    /// let factor2 = SparseVec::from_data(b"world");
     /// let compound = factor1.bundle(&factor2);
     ///
     /// let codebook = vec![factor1.clone(), factor2.clone()];
@@ -244,7 +238,7 @@ impl Resonator {
     /// # Examples
     ///
     /// ```no_run
-    /// use embeddenator::resonator::Resonator;
+    /// use embeddenator_retrieval::resonator::Resonator;
     /// use embeddenator::{SparseVec, ReversibleVSAConfig};
     ///
     /// let data = b"hello world";
@@ -288,7 +282,7 @@ impl Resonator {
     /// # Examples
     ///
     /// ```
-    /// use embeddenator::resonator::Resonator;
+    /// use embeddenator_retrieval::resonator::Resonator;
     /// use embeddenator::ReversibleVSAConfig;
     /// use std::collections::HashMap;
     ///
@@ -335,7 +329,7 @@ impl Resonator {
     /// # Examples
     ///
     /// ```
-    /// use embeddenator::resonator::Resonator;
+    /// use embeddenator_retrieval::resonator::Resonator;
     ///
     /// let resonator = Resonator::new();
     /// let similarities = vec![0.8, -0.3, 0.05, -0.9];

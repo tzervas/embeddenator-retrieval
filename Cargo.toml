@@ -1,6 +1,6 @@
 [package]
 name = "embeddenator-retrieval"
-version = "0.1.3"
+version = "0.2.0"
 edition = "2021"
 authors = ["Tyler Zervas <tz-dev@vectorweight.com>"]
 description = "Signature-based retrieval and resonator for holographic engrams"
@@ -16,9 +16,8 @@ default = []
 serde = { version = "1.0", features = ["derive"] }
 sha2 = "0.10"
 bincode = "1.3"
-embeddenator-vsa = { git = "https://github.com/tzervas/embeddenator-vsa", tag = "v0.1.0" }
-embeddenator-interop = { git = "https://github.com/tzervas/embeddenator-interop", tag = "v0.1.1" }
-embeddenator-obs = { git = "https://github.com/tzervas/embeddenator-obs", tag = "v0.1.1" }
+# Use path dependency for Phase 2A development
+embeddenator-vsa = { path = "../embeddenator-vsa" }
 
 [dev-dependencies]
 proptest = "1.0"

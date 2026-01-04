@@ -9,12 +9,6 @@
 use embeddenator_vsa::{SparseVec, DIM};
 use std::collections::HashMap;
 
-
-use embeddenator_obs::metrics;
-
-
-use std::time::Instant;
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SearchResult {
     pub id: usize,
@@ -113,9 +107,6 @@ impl TernaryInvertedIndex {
             return Vec::new();
         }
 
-        
-        let start = Instant::now();
-
         let mut scores = vec![0i32; self.max_id + 1];
         let mut touched = Vec::new();
         let mut touched_flag = vec![false; self.max_id + 1];
@@ -170,10 +161,6 @@ impl TernaryInvertedIndex {
 
         results.sort_by(|a, b| b.score.cmp(&a.score).then_with(|| a.id.cmp(&b.id)));
         results.truncate(k);
-
-        
-        metrics().record_retrieval_query(start.elapsed());
-
         results
     }
 
@@ -210,9 +197,6 @@ pub fn rerank_candidates_by_cosine(
         return Vec::new();
     }
 
-    
-    let start = Instant::now();
-
     let mut out = Vec::with_capacity(candidates.len().min(k));
     for cand in candidates {
         let Some(vec) = vectors.get(&cand.id) else {
@@ -233,9 +217,5 @@ pub fn rerank_candidates_by_cosine(
             .then_with(|| a.id.cmp(&b.id))
     });
     out.truncate(k);
-
-    
-    metrics().record_rerank(start.elapsed());
-
     out
 }
