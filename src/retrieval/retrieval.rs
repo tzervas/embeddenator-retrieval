@@ -6,13 +6,13 @@
 //! 2) Query to generate candidates with approximate dot scores.
 //! 3) Optionally rerank candidates using exact cosine similarity.
 
-use crate::vsa::{SparseVec, DIM};
+use embeddenator_vsa::{SparseVec, DIM};
 use std::collections::HashMap;
 
-#[cfg(feature = "metrics")]
-use crate::metrics::metrics;
 
-#[cfg(feature = "metrics")]
+use embeddenator_obs::metrics;
+
+
 use std::time::Instant;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -113,7 +113,7 @@ impl TernaryInvertedIndex {
             return Vec::new();
         }
 
-        #[cfg(feature = "metrics")]
+        
         let start = Instant::now();
 
         let mut scores = vec![0i32; self.max_id + 1];
@@ -171,7 +171,7 @@ impl TernaryInvertedIndex {
         results.sort_by(|a, b| b.score.cmp(&a.score).then_with(|| a.id.cmp(&b.id)));
         results.truncate(k);
 
-        #[cfg(feature = "metrics")]
+        
         metrics().record_retrieval_query(start.elapsed());
 
         results
@@ -210,7 +210,7 @@ pub fn rerank_candidates_by_cosine(
         return Vec::new();
     }
 
-    #[cfg(feature = "metrics")]
+    
     let start = Instant::now();
 
     let mut out = Vec::with_capacity(candidates.len().min(k));
@@ -234,7 +234,7 @@ pub fn rerank_candidates_by_cosine(
     });
     out.truncate(k);
 
-    #[cfg(feature = "metrics")]
+    
     metrics().record_rerank(start.elapsed());
 
     out

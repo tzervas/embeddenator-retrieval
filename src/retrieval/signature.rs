@@ -7,8 +7,8 @@
 //! - Fast to build + query
 //! - Multi-probe support (radius-1) to soften bucket boundary effects
 
-use crate::kernel_interop::CandidateGenerator;
-use crate::vsa::{SparseVec, DIM};
+use embeddenator_interop::CandidateGenerator;
+use embeddenator_vsa::{SparseVec, DIM};
 use std::collections::{HashMap, HashSet};
 
 /// How many probe dimensions are used for the default signature.
@@ -235,7 +235,7 @@ fn probe_signatures(base: u64, probes: usize, radius: u8, max_probes: usize) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vsa::ReversibleVSAConfig;
+    use embeddenator_vsa::ReversibleVSAConfig;
 
     #[test]
     fn default_probe_dims_are_stable_and_in_range() {
