@@ -1,7 +1,7 @@
 //! Unit tests for Resonator pattern completion and factorization
 
-use embeddenator_vsa::{SparseVec, ReversibleVSAConfig};
 use embeddenator_retrieval::resonator::Resonator;
+use embeddenator_vsa::{ReversibleVSAConfig, SparseVec};
 
 fn enc(data: &[u8]) -> SparseVec {
     SparseVec::encode_data(data, &ReversibleVSAConfig::default(), None)
