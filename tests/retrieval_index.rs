@@ -1,5 +1,5 @@
-use embeddenator_vsa::{ReversibleVSAConfig, SparseVec};
 use embeddenator_retrieval::TernaryInvertedIndex;
+use embeddenator_vsa::{ReversibleVSAConfig, SparseVec};
 
 #[test]
 fn test_inverted_index_returns_self_top_hit() {

@@ -1,17 +1,24 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use embeddenator_vsa::{SparseVec, TernaryInvertedIndex};
+use embeddenator_retrieval::TernaryInvertedIndex;
+use embeddenator_vsa::{ReversibleVSAConfig, SparseVec};
 
 fn bench_retrieval_index(c: &mut Criterion) {
     let mut group = c.benchmark_group("retrieval_index");
+    let config = ReversibleVSAConfig::default();
 
     // Build a deterministic corpus.
     let corpus_sizes = [1_000usize, 5_000];
     for n in corpus_sizes {
+        let config_clone = config.clone();
         group.bench_with_input(BenchmarkId::new("build", n), &n, |bencher, &n| {
             bencher.iter(|| {
                 let mut index = TernaryInvertedIndex::new();
                 for i in 0..n {
-                    let v = SparseVec::from_data(black_box(format!("doc-{i}").as_bytes()));
+                    let v = SparseVec::encode_data(
+                        black_box(format!("doc-{i}").as_bytes()),
+                        &config_clone,
+                        None,
+                    );
                     index.add(i, &v);
                 }
                 index.finalize();
@@ -22,12 +29,12 @@ fn bench_retrieval_index(c: &mut Criterion) {
         // Build once for query bench.
         let mut index = TernaryInvertedIndex::new();
         for i in 0..n {
-            let v = SparseVec::from_data(format!("doc-{i}").as_bytes());
+            let v = SparseVec::encode_data(format!("doc-{i}").as_bytes(), &config, None);
             index.add(i, &v);
         }
         index.finalize();
 
-        let query = SparseVec::from_data(b"doc-123");
+        let query = SparseVec::encode_data(b"doc-123", &config, None);
         group.bench_with_input(BenchmarkId::new("query_top_k_20", n), &n, |bencher, &_n| {
             bencher.iter(|| {
                 let hits = index.query_top_k(black_box(&query), 20);
