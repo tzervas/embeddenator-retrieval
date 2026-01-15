@@ -20,6 +20,6 @@ embeddenator-vsa = "0.20.0-alpha.1"
 
 [dev-dependencies]
 proptest = "1.0"
-criterion = "0.5"
+criterion = "0.8"
 tempfile = "3.0"
 embeddenator-fs = "0.20.0-alpha.1"
