@@ -91,13 +91,15 @@ println!("Cosine: {:.3}, Hamming: {:.1}, Jaccard: {:.3}",
 
 ## Performance
 
-Benchmarks on a modern CPU (corpus size = 10,000 vectors):
+Estimated benchmarks on a modern multi-core CPU (corpus size = 10,000 vectors):
 
 | Strategy | Latency (avg) | Throughput | Recall@10 |
 |----------|---------------|------------|-----------|
-| Approximate | ~0.5ms | 2000 QPS | 0.85 |
-| Two-stage (candidate_k=200) | ~2ms | 500 QPS | 0.98 |
-| Exact | ~15ms | 66 QPS | 1.00 |
+| Approximate | ~0.5ms | ~2000 QPS | ~0.85 |
+| Two-stage (candidate_k=200) | ~2ms | ~500 QPS | ~0.98 |
+| Exact | ~15ms | ~66 QPS | 1.00 |
+
+> **Note**: Actual performance varies significantly based on hardware, vector dimensionality, data distribution, and query patterns. Run benchmarks on your system for accurate numbers:
 
 Run benchmarks:
 ```bash
