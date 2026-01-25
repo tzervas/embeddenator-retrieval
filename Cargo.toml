@@ -6,6 +6,7 @@ authors = ["Tyler Zervas <tz-dev@vectorweight.com>"]
 description = "Semantic retrieval and search operations for VSA-based vector representations"
 license = "MIT"
 repository = "https://github.com/tzervas/embeddenator-retrieval"
+documentation = "https://docs.rs/embeddenator-retrieval"
 keywords = ["embeddenator", "retrieval", "holographic", "search", "vsa"]
 categories = ["algorithms", "data-structures"]
 
