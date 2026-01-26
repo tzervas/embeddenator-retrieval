@@ -250,11 +250,12 @@ dependencies = [
  "proptest",
  "serde",
  "sha2",
+ "tempfile",
 ]
 
 [[package]]
 name = "embeddenator-vsa"
-version = "0.20.1"
+version = "0.21.0"
 dependencies = [
  "libc",
  "rand",

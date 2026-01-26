@@ -336,12 +336,16 @@ fn test_search_config_customization() {
     let query = SparseVec::encode_data(b"document-10", &config, None);
 
     // Test with different candidate_k values
-    let mut config1 = SearchConfig::default();
-    config1.candidate_k = 5;
+    let config1 = SearchConfig {
+        candidate_k: 5,
+        ..SearchConfig::default()
+    };
     let results1 = two_stage_search(&query, &index, &vectors, &config1, 3);
 
-    let mut config2 = SearchConfig::default();
-    config2.candidate_k = 50;
+    let config2 = SearchConfig {
+        candidate_k: 50,
+        ..SearchConfig::default()
+    };
     let results2 = two_stage_search(&query, &index, &vectors, &config2, 3);
 
     assert_eq!(results1.len(), 3);

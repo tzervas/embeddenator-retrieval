@@ -136,8 +136,10 @@ fn bench_search_candidate_k(c: &mut Criterion) {
     let query = SparseVec::encode_data(b"query-test", &config, None);
 
     for candidate_k in [10, 50, 100, 200, 500] {
-        let mut search_config = SearchConfig::default();
-        search_config.candidate_k = candidate_k;
+        let search_config = SearchConfig {
+            candidate_k,
+            ..SearchConfig::default()
+        };
 
         group.throughput(Throughput::Elements(1));
         group.bench_with_input(

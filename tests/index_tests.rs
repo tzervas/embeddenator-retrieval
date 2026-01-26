@@ -74,8 +74,10 @@ fn test_brute_force_build_from_map() {
 #[test]
 fn test_hierarchical_index_basic() {
     let config = ReversibleVSAConfig::default();
-    let mut index_config = IndexConfig::default();
-    index_config.hierarchical = true;
+    let index_config = IndexConfig {
+        hierarchical: true,
+        ..IndexConfig::default()
+    };
     let mut index = HierarchicalIndex::new(index_config);
 
     // Add multiple vectors
@@ -96,8 +98,10 @@ fn test_hierarchical_index_basic() {
 #[test]
 fn test_hierarchical_index_non_hierarchical_mode() {
     let config = ReversibleVSAConfig::default();
-    let mut index_config = IndexConfig::default();
-    index_config.hierarchical = false; // Disable hierarchical
+    let index_config = IndexConfig {
+        hierarchical: false,
+        ..IndexConfig::default()
+    };
     let mut index = HierarchicalIndex::new(index_config);
 
     for i in 0..10 {
@@ -117,8 +121,10 @@ fn test_hierarchical_index_non_hierarchical_mode() {
 #[test]
 fn test_hierarchical_index_reranked() {
     let config = ReversibleVSAConfig::default();
-    let mut index_config = IndexConfig::default();
-    index_config.hierarchical = true;
+    let index_config = IndexConfig {
+        hierarchical: true,
+        ..IndexConfig::default()
+    };
     let mut index = HierarchicalIndex::new(index_config);
 
     let mut vectors = HashMap::new();
@@ -146,8 +152,10 @@ fn test_index_config_different_metrics() {
     let config = ReversibleVSAConfig::default();
 
     // Test with Jaccard metric
-    let mut jaccard_config = IndexConfig::default();
-    jaccard_config.metric = SimilarityMetric::Jaccard;
+    let jaccard_config = IndexConfig {
+        metric: SimilarityMetric::Jaccard,
+        ..IndexConfig::default()
+    };
     let mut jaccard_index = BruteForceIndex::new(jaccard_config);
 
     let vec1 = SparseVec::encode_data(b"test", &config, None);
@@ -208,8 +216,10 @@ fn test_index_k_zero() {
 #[test]
 fn test_index_large_corpus() {
     let config = ReversibleVSAConfig::default();
-    let mut index_config = IndexConfig::default();
-    index_config.hierarchical = true;
+    let index_config = IndexConfig {
+        hierarchical: true,
+        ..IndexConfig::default()
+    };
     let mut index = HierarchicalIndex::new(index_config);
 
     // Add 100 vectors
@@ -236,8 +246,10 @@ fn test_index_consistency_across_implementations() {
     let config = ReversibleVSAConfig::default();
 
     let mut bf_index = BruteForceIndex::new(IndexConfig::default());
-    let mut h_config = IndexConfig::default();
-    h_config.hierarchical = true;
+    let h_config = IndexConfig {
+        hierarchical: true,
+        ..IndexConfig::default()
+    };
     let mut h_index = HierarchicalIndex::new(h_config);
 
     // Add same data to both
@@ -283,9 +295,11 @@ fn test_index_add_duplicate_ids() {
 #[test]
 fn test_hierarchical_clustering_quality() {
     let config = ReversibleVSAConfig::default();
-    let mut index_config = IndexConfig::default();
-    index_config.hierarchical = true;
-    index_config.leaf_size = 10;
+    let index_config = IndexConfig {
+        hierarchical: true,
+        leaf_size: 10,
+        ..IndexConfig::default()
+    };
     let mut index = HierarchicalIndex::new(index_config);
 
     // Add vectors with some structure

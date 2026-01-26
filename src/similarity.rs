@@ -213,11 +213,17 @@ pub fn dot_product(a: &SparseVec, b: &SparseVec) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use embeddenator_vsa::ReversibleVSAConfig;
+
+    fn make_vec(data: &[u8]) -> SparseVec {
+        let config = ReversibleVSAConfig::default();
+        SparseVec::encode_data(data, &config, None)
+    }
 
     #[test]
     fn test_cosine_identical() {
-        let a = SparseVec::from_data(b"test");
-        let b = SparseVec::from_data(b"test");
+        let a = make_vec(b"test");
+        let b = make_vec(b"test");
         let sim = compute_similarity(&a, &b, SimilarityMetric::Cosine);
         assert!(
             sim > 0.99,
@@ -227,16 +233,16 @@ mod tests {
 
     #[test]
     fn test_cosine_different() {
-        let a = SparseVec::from_data(b"hello");
-        let b = SparseVec::from_data(b"world");
+        let a = make_vec(b"hello");
+        let b = make_vec(b"world");
         let sim = compute_similarity(&a, &b, SimilarityMetric::Cosine);
         assert!(sim < 0.5, "Different vectors should have low similarity");
     }
 
     #[test]
     fn test_hamming_identical() {
-        let a = SparseVec::from_data(b"test");
-        let b = SparseVec::from_data(b"test");
+        let a = make_vec(b"test");
+        let b = make_vec(b"test");
         let dist = hamming_distance(&a, &b);
         assert_eq!(
             dist, 0.0,
@@ -246,8 +252,8 @@ mod tests {
 
     #[test]
     fn test_hamming_different() {
-        let a = SparseVec::from_data(b"hello");
-        let b = SparseVec::from_data(b"world");
+        let a = make_vec(b"hello");
+        let b = make_vec(b"world");
         let dist = hamming_distance(&a, &b);
         assert!(
             dist > 0.0,
@@ -257,8 +263,8 @@ mod tests {
 
     #[test]
     fn test_jaccard_identical() {
-        let a = SparseVec::from_data(b"test");
-        let b = SparseVec::from_data(b"test");
+        let a = make_vec(b"test");
+        let b = make_vec(b"test");
         let sim = jaccard_similarity(&a, &b);
         assert!(
             (sim - 1.0).abs() < 0.01,
@@ -268,8 +274,8 @@ mod tests {
 
     #[test]
     fn test_jaccard_disjoint() {
-        let a = SparseVec::from_data(b"aaa");
-        let b = SparseVec::from_data(b"zzz");
+        let a = make_vec(b"aaa");
+        let b = make_vec(b"zzz");
         let sim = jaccard_similarity(&a, &b);
         assert!(
             sim < 0.5,
@@ -279,8 +285,8 @@ mod tests {
 
     #[test]
     fn test_dot_product_identical() {
-        let a = SparseVec::from_data(b"test");
-        let b = SparseVec::from_data(b"test");
+        let a = make_vec(b"test");
+        let b = make_vec(b"test");
         let dot = dot_product(&a, &b);
         assert!(
             dot > 0,

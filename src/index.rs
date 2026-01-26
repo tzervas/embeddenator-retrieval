@@ -338,8 +338,10 @@ mod tests {
     #[test]
     fn test_hierarchical_index() {
         let config = ReversibleVSAConfig::default();
-        let mut index_config = IndexConfig::default();
-        index_config.hierarchical = true;
+        let index_config = IndexConfig {
+            hierarchical: true,
+            ..IndexConfig::default()
+        };
         let mut index = HierarchicalIndex::new(index_config);
 
         // Add multiple vectors

@@ -157,7 +157,7 @@ fn test_similarity_range_bounds() {
     // Cosine should be in [-1, 1]
     let cosine = compute_similarity(&vec1, &vec2, SimilarityMetric::Cosine);
     assert!(
-        cosine >= -1.0 && cosine <= 1.0,
+        (-1.0..=1.0).contains(&cosine),
         "Cosine should be in [-1, 1], got {}",
         cosine
     );
@@ -173,7 +173,7 @@ fn test_similarity_range_bounds() {
     // Jaccard should be in [0, 1]
     let jaccard = compute_similarity(&vec1, &vec2, SimilarityMetric::Jaccard);
     assert!(
-        jaccard >= 0.0 && jaccard <= 1.0,
+        (0.0..=1.0).contains(&jaccard),
         "Jaccard should be in [0, 1], got {}",
         jaccard
     );

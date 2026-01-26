@@ -154,6 +154,6 @@ impl QueryEngine {
 mod tests {
     #[test]
     fn component_loads() {
-        assert!(true);
+        // Simply verify the module compiles
     }
 }
