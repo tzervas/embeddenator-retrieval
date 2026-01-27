@@ -374,6 +374,7 @@ dependencies = [
  "embeddenator-fs",
  "embeddenator-vsa",
  "proptest",
+ "rayon",
  "serde",
  "sha2",
  "tempfile",

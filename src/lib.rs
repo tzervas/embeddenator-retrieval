@@ -71,7 +71,10 @@ pub mod similarity;
 pub use core::{correction, resonator};
 pub use index::{BruteForceIndex, HierarchicalIndex, IndexConfig, RetrievalIndex};
 pub use retrieval::*;
-pub use search::{approximate_search, exact_search, two_stage_search, RankedResult, SearchConfig};
+pub use search::{
+    approximate_search, batch_search, exact_search, exact_search_parallel, two_stage_search,
+    RankedResult, SearchConfig,
+};
 pub use similarity::{compute_similarity, SimilarityMetric};
 
 // Convenience wrappers for integration tests

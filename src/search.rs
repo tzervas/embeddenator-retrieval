@@ -5,11 +5,16 @@
 //! - Approximate search (inverted index)
 //! - Beam search (hierarchical)
 //! - Two-stage search (candidate generation + reranking)
+//!
+//! All search functions support parallel execution via `SearchConfig::parallel`.
+
+use std::collections::HashMap;
+
+use rayon::prelude::*;
 
 use crate::retrieval::{SearchResult, TernaryInvertedIndex};
 use crate::similarity::{compute_similarity, SimilarityMetric};
 use embeddenator_vsa::SparseVec;
-use std::collections::HashMap;
 
 /// Search strategy configuration
 #[derive(Debug, Clone)]
@@ -106,10 +111,17 @@ pub fn two_stage_search(
     let candidates = index.query_top_k(query, candidate_k);
 
     // Stage 2: Rerank candidates with exact similarity
-    let mut reranked: Vec<RankedResult> = candidates
-        .iter()
-        .filter_map(|cand| {
-            vectors.get(&cand.id).map(|vec| {
+    // Use parallel iteration when enabled for compute-intensive similarity calculations
+    let mut reranked: Vec<RankedResult> = if config.parallel {
+        // Collect candidates with their vectors first to enable parallel processing
+        let candidates_with_vecs: Vec<_> = candidates
+            .iter()
+            .filter_map(|cand| vectors.get(&cand.id).map(|vec| (cand, vec)))
+            .collect();
+
+        candidates_with_vecs
+            .par_iter()
+            .map(|(cand, vec)| {
                 let score = compute_similarity(query, vec, config.metric);
                 RankedResult {
                     id: cand.id,
@@ -118,8 +130,23 @@ pub fn two_stage_search(
                     rank: 0, // Will be set after sorting
                 }
             })
-        })
-        .collect();
+            .collect()
+    } else {
+        candidates
+            .iter()
+            .filter_map(|cand| {
+                vectors.get(&cand.id).map(|vec| {
+                    let score = compute_similarity(query, vec, config.metric);
+                    RankedResult {
+                        id: cand.id,
+                        score,
+                        approx_score: cand.score,
+                        rank: 0, // Will be set after sorting
+                    }
+                })
+            })
+            .collect()
+    };
 
     // Sort by similarity score
     reranked.sort_by(|a, b| {
@@ -175,22 +202,63 @@ pub fn exact_search(
     metric: SimilarityMetric,
     k: usize,
 ) -> Vec<RankedResult> {
+    exact_search_impl(query, vectors, metric, k, false)
+}
+
+/// Exact search with parallel option
+///
+/// Same as `exact_search` but allows enabling parallel processing
+/// for large vector collections.
+pub fn exact_search_parallel(
+    query: &SparseVec,
+    vectors: &HashMap<usize, SparseVec>,
+    metric: SimilarityMetric,
+    k: usize,
+    parallel: bool,
+) -> Vec<RankedResult> {
+    exact_search_impl(query, vectors, metric, k, parallel)
+}
+
+fn exact_search_impl(
+    query: &SparseVec,
+    vectors: &HashMap<usize, SparseVec>,
+    metric: SimilarityMetric,
+    k: usize,
+    parallel: bool,
+) -> Vec<RankedResult> {
     if k == 0 || vectors.is_empty() {
         return Vec::new();
     }
 
-    let mut results: Vec<RankedResult> = vectors
-        .iter()
-        .map(|(id, vec)| {
-            let score = compute_similarity(query, vec, metric);
-            RankedResult {
-                id: *id,
-                score,
-                approx_score: (score * 1000.0) as i32,
-                rank: 0,
-            }
-        })
-        .collect();
+    let mut results: Vec<RankedResult> = if parallel {
+        // Collect to vec first for parallel iteration
+        let vec_entries: Vec<_> = vectors.iter().collect();
+        vec_entries
+            .par_iter()
+            .map(|(id, vec)| {
+                let score = compute_similarity(query, vec, metric);
+                RankedResult {
+                    id: **id,
+                    score,
+                    approx_score: (score * 1000.0) as i32,
+                    rank: 0,
+                }
+            })
+            .collect()
+    } else {
+        vectors
+            .iter()
+            .map(|(id, vec)| {
+                let score = compute_similarity(query, vec, metric);
+                RankedResult {
+                    id: *id,
+                    score,
+                    approx_score: (score * 1000.0) as i32,
+                    rank: 0,
+                }
+            })
+            .collect()
+    };
 
     results.sort_by(|a, b| {
         b.score
@@ -288,10 +356,18 @@ pub fn batch_search(
     config: &SearchConfig,
     k: usize,
 ) -> Vec<Vec<RankedResult>> {
-    queries
-        .iter()
-        .map(|query| two_stage_search(query, index, vectors, config, k))
-        .collect()
+    if config.parallel {
+        // Process multiple queries concurrently
+        queries
+            .par_iter()
+            .map(|query| two_stage_search(query, index, vectors, config, k))
+            .collect()
+    } else {
+        queries
+            .iter()
+            .map(|query| two_stage_search(query, index, vectors, config, k))
+            .collect()
+    }
 }
 
 /// Compute recall@k metric for search quality evaluation
@@ -429,5 +505,109 @@ mod tests {
 
         let recall = compute_recall_at_k(&approx, &exact, 3);
         assert!((recall - 0.666).abs() < 0.01); // 2/3 match
+    }
+
+    #[test]
+    fn test_parallel_two_stage_search_matches_sequential() {
+        let config = ReversibleVSAConfig::default();
+        let mut index = TernaryInvertedIndex::new();
+        let mut vectors = HashMap::new();
+
+        // Build a corpus of 50 vectors for meaningful parallel work
+        for i in 0..50 {
+            let data = format!("document number {} with some content", i);
+            let vec = SparseVec::encode_data(data.as_bytes(), &config, None);
+            index.add(i, &vec);
+            vectors.insert(i, vec);
+        }
+        index.finalize();
+
+        let query = SparseVec::encode_data(b"document number 25", &config, None);
+
+        let seq_config = SearchConfig {
+            parallel: false,
+            ..SearchConfig::default()
+        };
+        let par_config = SearchConfig {
+            parallel: true,
+            ..SearchConfig::default()
+        };
+
+        let seq_results = two_stage_search(&query, &index, &vectors, &seq_config, 10);
+        let par_results = two_stage_search(&query, &index, &vectors, &par_config, 10);
+
+        assert_eq!(seq_results.len(), par_results.len());
+        for (seq, par) in seq_results.iter().zip(par_results.iter()) {
+            assert_eq!(seq.id, par.id);
+            assert!((seq.score - par.score).abs() < 1e-10);
+            assert_eq!(seq.rank, par.rank);
+        }
+    }
+
+    #[test]
+    fn test_parallel_exact_search_matches_sequential() {
+        let config = ReversibleVSAConfig::default();
+        let mut vectors = HashMap::new();
+
+        for i in 0..100 {
+            let data = format!("item {} for testing parallel exact search", i);
+            vectors.insert(i, SparseVec::encode_data(data.as_bytes(), &config, None));
+        }
+
+        let query = SparseVec::encode_data(b"item 50 for testing", &config, None);
+
+        let seq_results =
+            exact_search_parallel(&query, &vectors, SimilarityMetric::Cosine, 20, false);
+        let par_results =
+            exact_search_parallel(&query, &vectors, SimilarityMetric::Cosine, 20, true);
+
+        assert_eq!(seq_results.len(), par_results.len());
+        for (seq, par) in seq_results.iter().zip(par_results.iter()) {
+            assert_eq!(seq.id, par.id);
+            assert!((seq.score - par.score).abs() < 1e-10);
+        }
+    }
+
+    #[test]
+    fn test_parallel_batch_search_matches_sequential() {
+        let config = ReversibleVSAConfig::default();
+        let mut index = TernaryInvertedIndex::new();
+        let mut vectors = HashMap::new();
+
+        for i in 0..30 {
+            let data = format!("batch doc {}", i);
+            let vec = SparseVec::encode_data(data.as_bytes(), &config, None);
+            index.add(i, &vec);
+            vectors.insert(i, vec);
+        }
+        index.finalize();
+
+        let queries: Vec<SparseVec> = (0..10)
+            .map(|i| {
+                let data = format!("query {}", i);
+                SparseVec::encode_data(data.as_bytes(), &config, None)
+            })
+            .collect();
+
+        let seq_config = SearchConfig {
+            parallel: false,
+            ..SearchConfig::default()
+        };
+        let par_config = SearchConfig {
+            parallel: true,
+            ..SearchConfig::default()
+        };
+
+        let seq_results = batch_search(&queries, &index, &vectors, &seq_config, 5);
+        let par_results = batch_search(&queries, &index, &vectors, &par_config, 5);
+
+        assert_eq!(seq_results.len(), par_results.len());
+        for (seq_batch, par_batch) in seq_results.iter().zip(par_results.iter()) {
+            assert_eq!(seq_batch.len(), par_batch.len());
+            for (seq, par) in seq_batch.iter().zip(par_batch.iter()) {
+                assert_eq!(seq.id, par.id);
+                assert!((seq.score - par.score).abs() < 1e-10);
+            }
+        }
     }
 }
