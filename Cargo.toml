@@ -1,12 +1,13 @@
 [package]
 name = "embeddenator-retrieval"
-version = "0.20.0-alpha.1"
+version = "0.21.0"
 edition = "2021"
 authors = ["Tyler Zervas <tz-dev@vectorweight.com>"]
-description = "Signature-based retrieval and resonator for holographic engrams"
+description = "Semantic retrieval and search operations for VSA-based vector representations"
 license = "MIT"
 repository = "https://github.com/tzervas/embeddenator-retrieval"
-keywords = ["embeddenator", "retrieval", "holographic", "resonator"]
+documentation = "https://docs.rs/embeddenator-retrieval"
+keywords = ["embeddenator", "retrieval", "holographic", "search", "vsa"]
 categories = ["algorithms", "data-structures"]
 
 [features]
@@ -19,7 +20,17 @@ bincode = "3.0"
 embeddenator-vsa = "0.20.0-alpha.1"
 
 [dev-dependencies]
-proptest = "1.0"
-criterion = "0.8"
-tempfile = "3.0"
-embeddenator-fs = "0.20.0-alpha.1"
+proptest = ">=1.0, <2.0"
+criterion = ">=0.5, <1.0"
+tempfile = ">=3.0, <4.0"
+
+[[bench]]
+name = "retrieval"
+harness = false
+
+[[bench]]
+name = "search_performance"
+harness = false
+
+# NOTE: query_hierarchical benchmark moved to embeddenator-fs
+# (it requires EmbrFS which creates a circular dependency)
