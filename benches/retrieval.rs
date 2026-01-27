@@ -9,13 +9,14 @@ fn bench_retrieval_index(c: &mut Criterion) {
     // Build a deterministic corpus.
     let corpus_sizes = [1_000usize, 5_000];
     for n in corpus_sizes {
+        let config_clone = config.clone();
         group.bench_with_input(BenchmarkId::new("build", n), &n, |bencher, &n| {
             bencher.iter(|| {
                 let mut index = TernaryInvertedIndex::new();
                 for i in 0..n {
                     let v = SparseVec::encode_data(
                         black_box(format!("doc-{i}").as_bytes()),
-                        &config,
+                        &config_clone,
                         None,
                     );
                     index.add(i, &v);
