@@ -21,7 +21,17 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
-      
+
+      - name: Clone dependency repos
+        run: |
+          cd ..
+          # Clone path dependencies that this repo needs
+          for repo in embeddenator-vsa embeddenator-fs; do
+            if [ ! -d "$repo" ]; then
+              git clone --depth 1 https://github.com/tzervas/$repo.git || true
+            fi
+          done
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
