@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, dev]
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -22,35 +22,47 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Clone dependency repos
+      # Clone path dependencies for dev/feature branches
+      # Main branch should use published crates from crates.io
+      - name: Clone dependency repos (dev branches)
+        if: github.base_ref != 'main' && github.ref != 'refs/heads/main'
         run: |
           cd ..
-          # Clone path dependencies that this repo needs
+          echo "Branch: ${{ github.ref }}, Base: ${{ github.base_ref }}"
+          echo "Cloning path dependencies for development build..."
           for repo in embeddenator-vsa embeddenator-fs; do
             if [ ! -d "$repo" ]; then
+              echo "Cloning $repo..."
               git clone --depth 1 https://github.com/tzervas/$repo.git || true
             fi
           done
+
+      # For main branch, verify crates.io deps are available
+      - name: Verify crates.io dependencies (main branch)
+        if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
+        run: |
+          echo "Main branch build - using crates.io dependencies"
+          echo "If this fails, ensure dependencies are published to crates.io"
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
-      
+
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           key: embeddenator-retrieval
-      
+
       - name: Check formatting
         run: cargo fmt --check
-      
+
       - name: Clippy lints
         run: cargo clippy --all-targets --all-features -- -D warnings
-      
+
       - name: Build
         run: cargo build --all-features
-      
+
       - name: Run tests
         run: cargo test --all-features --verbose
 
@@ -63,17 +75,28 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
-      
+
+      # Clone path dependencies for dev/feature branches
+      - name: Clone dependency repos (dev branches)
+        if: github.base_ref != 'main' && github.ref != 'refs/heads/main'
+        run: |
+          cd ..
+          for repo in embeddenator-vsa embeddenator-fs; do
+            if [ ! -d "$repo" ]; then
+              git clone --depth 1 https://github.com/tzervas/$repo.git || true
+            fi
+          done
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           key: embeddenator-retrieval-arm64
-      
+
       - name: Build
         run: cargo build --all-features
-      
+
       - name: Run tests
         run: cargo test --all-features
