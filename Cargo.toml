@@ -26,4 +26,4 @@ embeddenator-vsa = { path = "../embeddenator-vsa", version = ">=0.21.0, <1.0.0" 
 proptest = "1.0"
 criterion = "0.8"
 tempfile = "3.0"
-embeddenator-fs = { path = "../embeddenator-fs", version = ">=0.24.0, <1.0.0" }
+embeddenator-fs = { path = "../embeddenator-fs" }
