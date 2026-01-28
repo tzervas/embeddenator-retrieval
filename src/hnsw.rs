@@ -676,6 +676,7 @@ mod tests {
     use super::*;
     use crate::index::RetrievalIndex;
 
+    #[allow(deprecated)]
     fn create_test_vector(data: &[u8]) -> SparseVec {
         // Use from_data for faster test vector creation
         SparseVec::from_data(data)
