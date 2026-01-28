@@ -1,12 +1,13 @@
 [package]
 name = "embeddenator-retrieval"
-version = "0.20.0-alpha.1"
+version = "0.21.0"
 edition = "2021"
 authors = ["Tyler Zervas <tz-dev@vectorweight.com>"]
-description = "Signature-based retrieval and resonator for holographic engrams"
+description = "Semantic retrieval and search operations for VSA-based vector representations"
 license = "MIT"
 repository = "https://github.com/tzervas/embeddenator-retrieval"
-keywords = ["embeddenator", "retrieval", "holographic", "resonator"]
+documentation = "https://docs.rs/embeddenator-retrieval"
+keywords = ["embeddenator", "retrieval", "holographic", "search", "vsa"]
 categories = ["algorithms", "data-structures"]
 
 [features]
@@ -15,11 +16,14 @@ default = []
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 sha2 = "0.10"
-bincode = "3.0"
-embeddenator-vsa = "0.20.0-alpha.1"
+# Note: bincode 3.0.0 has intentional compile_error (XKCD 2347 protest)
+# Use 1.x which has compatible serialize/deserialize API
+bincode = ">=1.3, <2.0"
+rayon = ">=1.8, <2.0"
+embeddenator-vsa = { path = "../embeddenator-vsa" }
 
 [dev-dependencies]
 proptest = "1.0"
-criterion = "0.5"
+criterion = "0.8"
 tempfile = "3.0"
-embeddenator-fs = "0.20.0-alpha.1"
+embeddenator-fs = { path = "../embeddenator-fs" }
