@@ -1,6 +1,7 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use embeddenator_retrieval::TernaryInvertedIndex;
 use embeddenator_vsa::{ReversibleVSAConfig, SparseVec};
+use std::hint::black_box;
 
 fn bench_retrieval_index(c: &mut Criterion) {
     let mut group = c.benchmark_group("retrieval_index");

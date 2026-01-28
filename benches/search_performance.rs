@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use embeddenator_retrieval::{
     search::{approximate_search, exact_search, two_stage_search, SearchConfig},
     similarity::SimilarityMetric,
@@ -6,6 +6,7 @@ use embeddenator_retrieval::{
 };
 use embeddenator_vsa::{ReversibleVSAConfig, SparseVec};
 use std::collections::HashMap;
+use std::hint::black_box;
 
 fn build_corpus(size: usize) -> (TernaryInvertedIndex, HashMap<usize, SparseVec>) {
     let config = ReversibleVSAConfig::default();
