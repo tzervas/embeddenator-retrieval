@@ -62,6 +62,7 @@
 //! ```
 
 pub mod core;
+pub mod hnsw;
 pub mod index;
 pub mod retrieval;
 pub mod search;
@@ -69,6 +70,7 @@ pub mod similarity;
 
 // Re-export key types for convenience
 pub use core::{correction, resonator};
+pub use hnsw::{HNSWConfig, HNSWIndex, HNSWStats};
 pub use index::{BruteForceIndex, HierarchicalIndex, IndexConfig, RetrievalIndex};
 pub use retrieval::*;
 pub use search::{
