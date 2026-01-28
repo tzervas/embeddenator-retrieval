@@ -27,3 +27,11 @@ proptest = "1.0"
 criterion = "0.8"
 tempfile = "3.0"
 embeddenator-fs = { path = "../embeddenator-fs" }
+
+[[bench]]
+name = "retrieval"
+harness = false
+
+[[bench]]
+name = "search_performance"
+harness = false
