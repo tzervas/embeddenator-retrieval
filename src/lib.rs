@@ -62,6 +62,7 @@
 //! ```
 
 pub mod core;
+pub mod distributed;
 pub mod hnsw;
 pub mod index;
 pub mod retrieval;
@@ -78,6 +79,13 @@ pub use search::{
     RankedResult, SearchConfig,
 };
 pub use similarity::{compute_similarity, SimilarityMetric};
+
+// Distributed search (#51)
+pub use distributed::{
+    DistributedConfig, DistributedError, DistributedResult, DistributedSearch,
+    DistributedSearchBuilder, QueryStats, Shard, ShardAssigner, ShardId, ShardResult, ShardStatus,
+    ShardingStrategy,
+};
 
 // Convenience wrappers for integration tests
 use embeddenator_vsa::SparseVec;
