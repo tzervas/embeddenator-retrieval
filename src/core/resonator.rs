@@ -304,27 +304,127 @@ impl Resonator {
     /// ```
     pub fn recover_chunks(
         &self,
-        _available_chunks: &std::collections::HashMap<usize, Vec<u8>>,
+        available_chunks: &std::collections::HashMap<usize, Vec<u8>>,
         missing_chunk_ids: &[usize],
-        _config: &ReversibleVSAConfig,
+        config: &ReversibleVSAConfig,
     ) -> std::collections::HashMap<usize, Vec<u8>> {
         let mut recovered = std::collections::HashMap::new();
 
-        for &chunk_id in missing_chunk_ids {
-            // Try to recover this chunk using available context
-            // This is a simplified implementation - in practice, you'd use
-            // more sophisticated pattern completion based on neighboring chunks
+        if missing_chunk_ids.is_empty() {
+            return recovered;
+        }
 
-            if !self.codebook.is_empty() {
-                // Use codebook patterns to attempt recovery
-                // For now, return a placeholder - this would be enhanced with
-                // actual recovery logic based on chunk relationships
-                let placeholder = format!("recovered_chunk_{}", chunk_id).into_bytes();
-                recovered.insert(chunk_id, placeholder);
-            }
+        // Determine typical chunk size from available chunks
+        let chunk_size = available_chunks
+            .values()
+            .next()
+            .map(|c| c.len())
+            .unwrap_or(4096);
+
+        for &chunk_id in missing_chunk_ids {
+            // Find neighboring chunks for context
+            let prev_chunk = if chunk_id > 0 {
+                available_chunks.get(&(chunk_id - 1))
+            } else {
+                None
+            };
+            let next_chunk = available_chunks.get(&(chunk_id + 1));
+
+            // Try recovery strategies in order of preference
+            let recovered_data = if let (Some(prev), Some(next)) = (prev_chunk, next_chunk) {
+                // Strategy 1: Interpolation from neighbors
+                // Average byte values from prev and next chunks
+                self.interpolate_chunk(prev, next, chunk_size)
+            } else if let Some(neighbor) = prev_chunk.or(next_chunk) {
+                // Strategy 2: Pattern completion from single neighbor
+                self.complete_from_neighbor(neighbor, chunk_size, config)
+            } else if !self.codebook.is_empty() {
+                // Strategy 3: Codebook projection (find most common pattern)
+                self.recover_from_codebook(chunk_size, config)
+            } else {
+                // Strategy 4: Zero-fill as last resort
+                vec![0u8; chunk_size]
+            };
+
+            recovered.insert(chunk_id, recovered_data);
         }
 
         recovered
+    }
+
+    /// Interpolate a chunk from its neighbors by averaging byte values
+    fn interpolate_chunk(&self, prev: &[u8], next: &[u8], target_size: usize) -> Vec<u8> {
+        let mut result = Vec::with_capacity(target_size);
+
+        for i in 0..target_size {
+            let prev_byte = prev.get(i).copied().unwrap_or(0);
+            let next_byte = next.get(i).copied().unwrap_or(0);
+
+            // Simple average - works well for smooth data transitions
+            let interpolated = ((prev_byte as u16 + next_byte as u16) / 2) as u8;
+            result.push(interpolated);
+        }
+
+        result
+    }
+
+    /// Complete a chunk using patterns from a single neighbor
+    fn complete_from_neighbor(
+        &self,
+        neighbor: &[u8],
+        target_size: usize,
+        config: &ReversibleVSAConfig,
+    ) -> Vec<u8> {
+        if !self.codebook.is_empty() {
+            // Encode neighbor and project onto codebook for pattern match
+            let neighbor_vec = SparseVec::encode_data(neighbor, config, None);
+            let projected = self.project(&neighbor_vec);
+
+            // Decode the projected vector to get cleaned pattern
+            let decoded = projected.decode_data(config, None, target_size);
+            if !decoded.is_empty() {
+                return decoded;
+            }
+        }
+
+        // Fallback: return a copy of neighbor (sequential chunks often similar)
+        let mut result = Vec::with_capacity(target_size);
+        for i in 0..target_size {
+            result.push(neighbor.get(i).copied().unwrap_or(0));
+        }
+        result
+    }
+
+    /// Recover a chunk using the most representative codebook pattern
+    fn recover_from_codebook(&self, target_size: usize, config: &ReversibleVSAConfig) -> Vec<u8> {
+        if self.codebook.is_empty() {
+            return vec![0u8; target_size];
+        }
+
+        // Find the codebook entry with highest average similarity to all others
+        // (most "central" pattern that represents typical content)
+        let mut best_pattern = &self.codebook[0];
+        let mut best_centrality = f64::NEG_INFINITY;
+
+        for pattern in &self.codebook {
+            let mut total_sim = 0.0;
+            for other in &self.codebook {
+                total_sim += pattern.cosine(other);
+            }
+            let centrality = total_sim / self.codebook.len() as f64;
+            if centrality > best_centrality {
+                best_centrality = centrality;
+                best_pattern = pattern;
+            }
+        }
+
+        // Decode the most central pattern
+        let decoded = best_pattern.decode_data(config, None, target_size);
+        if !decoded.is_empty() {
+            decoded
+        } else {
+            vec![0u8; target_size]
+        }
     }
 
     /// Apply ternary sign thresholding to enhance sparsity preservation
