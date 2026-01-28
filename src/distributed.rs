@@ -40,10 +40,16 @@
 //! use embeddenator_retrieval::distributed::{
 //!     DistributedSearch, Shard, ShardId, DistributedConfig,
 //! };
+//! use embeddenator_vsa::SparseVec;
 //!
 //! // Create shards (each could be on a different node)
-//! let shard0 = Shard::new(ShardId(0), data_partition_0);
-//! let shard1 = Shard::new(ShardId(1), data_partition_1);
+//! let mut shard0 = Shard::new(ShardId(0));
+//! shard0.add(1, SparseVec::from_data(b"document one"));
+//! shard0.finalize();
+//!
+//! let mut shard1 = Shard::new(ShardId(1));
+//! shard1.add(2, SparseVec::from_data(b"document two"));
+//! shard1.finalize();
 //!
 //! // Create distributed search coordinator
 //! let mut search = DistributedSearch::new(DistributedConfig::default());
@@ -51,7 +57,8 @@
 //! search.add_shard(shard1);
 //!
 //! // Execute distributed query
-//! let results = search.query(&query_vec, 10)?;
+//! let query = SparseVec::from_data(b"document");
+//! let (results, stats) = search.query(&query, 10)?;
 //! ```
 
 use std::collections::HashMap;
@@ -77,7 +84,7 @@ impl ShardId {
 }
 
 /// Shard status
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum ShardStatus {
     /// Shard is healthy and accepting queries
     #[default]
@@ -163,6 +170,11 @@ impl Shard {
     pub fn is_available(&self) -> bool {
         matches!(self.status, ShardStatus::Healthy | ShardStatus::Degraded)
     }
+
+    /// Update shard status
+    pub fn set_status(&mut self, status: ShardStatus) {
+        self.status = status;
+    }
 }
 
 /// Result from a single shard query
@@ -240,7 +252,7 @@ pub enum DistributedError {
     InsufficientShards { available: usize, required: usize },
     /// All shard queries failed
     AllShardsFailed,
-    /// Query timeout
+    /// Query timeout (reserved for future use; timeout handling is not yet implemented)
     Timeout,
     /// Invalid configuration
     InvalidConfig(String),
@@ -291,7 +303,13 @@ impl DistributedSearch {
         }
     }
 
-    /// Add a shard to the cluster
+    /// Add a shard to the cluster.
+    ///
+    /// Callers must ensure that each shard registered with this coordinator
+    /// has a unique [`ShardId`] and that the same shard is not added more
+    /// than once. Adding multiple shards with the same `ShardId`, or
+    /// registering the same shard repeatedly, may lead to incorrect query
+    /// results and statistics.
     pub fn add_shard(&mut self, shard: Shard) {
         self.shards.push(Arc::new(RwLock::new(shard)));
     }
@@ -318,6 +336,20 @@ impl DistributedSearch {
         let start = std::time::Instant::now();
         self.total_queries.fetch_add(1, Ordering::Relaxed);
 
+        // Short-circuit when k=0 to avoid unnecessary work
+        if k == 0 {
+            return Ok((
+                Vec::new(),
+                QueryStats {
+                    shards_queried: 0,
+                    shards_responded: 0,
+                    total_candidates: 0,
+                    unique_results: 0,
+                    query_time_ms: start.elapsed().as_millis() as u64,
+                },
+            ));
+        }
+
         // Check shard availability
         let available_shards: Vec<_> = self
             .shards
@@ -332,10 +364,11 @@ impl DistributedSearch {
             });
         }
 
-        // Calculate k for each shard
-        let shard_k = ((k as f64 * self.config.shard_k_multiplier) as usize).max(k);
+        // Calculate k for each shard with overflow protection
+        let shard_k =
+            ((k as f64 * self.config.shard_k_multiplier).min(usize::MAX as f64) as usize).max(k);
 
-        // Query shards (parallel or sequential)
+        // Query shards (parallel or sequential), tracking actual responses
         let shard_results: Vec<Vec<ShardResult>> = if self.config.parallel_shards {
             available_shards
                 .par_iter()
@@ -358,6 +391,9 @@ impl DistributedSearch {
                 .collect()
         };
 
+        // Track actual responses vs queried
+        let shards_responded = shard_results.len();
+
         if shard_results.is_empty() {
             return Err(DistributedError::AllShardsFailed);
         }
@@ -366,11 +402,12 @@ impl DistributedSearch {
         let total_candidates: usize = shard_results.iter().map(|r| r.len()).sum();
         let mut all_results: Vec<ShardResult> = shard_results.into_iter().flatten().collect();
 
-        // Sort by score descending
+        // Sort by score descending, then by doc_id for deterministic ordering
         all_results.sort_by(|a, b| {
             b.score
                 .partial_cmp(&a.score)
                 .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| a.doc_id.cmp(&b.doc_id))
         });
 
         // Deduplicate by doc_id (keep highest score)
@@ -390,7 +427,7 @@ impl DistributedSearch {
 
         let stats = QueryStats {
             shards_queried: available_shards.len(),
-            shards_responded: available_shards.len(),
+            shards_responded,
             total_candidates,
             unique_results: unique_results.len(),
             query_time_ms: start.elapsed().as_millis() as u64,
@@ -466,17 +503,25 @@ pub struct DistributedSearchBuilder {
     num_shards: u32,
     sharding_strategy: ShardingStrategy,
     shards: Vec<Shard>,
+    assigner: ShardAssigner,
 }
 
 impl DistributedSearchBuilder {
     /// Create a new builder
+    ///
+    /// # Panics
+    ///
+    /// Panics if `num_shards` is 0.
     pub fn new(num_shards: u32) -> Self {
+        assert!(num_shards > 0, "num_shards must be greater than 0");
         let shards = (0..num_shards).map(|i| Shard::new(ShardId(i))).collect();
+        let assigner = ShardAssigner::new(ShardingStrategy::default(), num_shards);
         Self {
             config: DistributedConfig::default(),
             num_shards,
             sharding_strategy: ShardingStrategy::default(),
             shards,
+            assigner,
         }
     }
 
@@ -489,13 +534,15 @@ impl DistributedSearchBuilder {
     /// Set the sharding strategy
     pub fn with_strategy(mut self, strategy: ShardingStrategy) -> Self {
         self.sharding_strategy = strategy;
+        // Recreate assigner with new strategy, preserving counter state
+        self.assigner = ShardAssigner::new(strategy, self.num_shards);
         self
     }
 
     /// Add a document to the cluster (assigns to appropriate shard)
     pub fn add_document(&mut self, doc_id: usize, vec: SparseVec) {
-        let assigner = ShardAssigner::new(self.sharding_strategy, self.num_shards);
-        let shard_id = assigner.assign(doc_id);
+        // Use the stored assigner to maintain RoundRobin counter state
+        let shard_id = self.assigner.assign(doc_id);
         if let Some(shard) = self.shards.get_mut(shard_id.0 as usize) {
             shard.add(doc_id, vec);
         }
@@ -726,5 +773,108 @@ mod tests {
 
         assert!(!results.is_empty());
         assert_eq!(stats.shards_queried, 4);
+    }
+
+    #[test]
+    fn test_all_shards_failed() {
+        // Create search with shards that all become unavailable
+        let mut shard0 = Shard::new(ShardId(0));
+        shard0.add(1, create_test_vec(b"document one"));
+        shard0.finalize();
+        shard0.set_status(ShardStatus::Offline);
+
+        let mut shard1 = Shard::new(ShardId(1));
+        shard1.add(2, create_test_vec(b"document two"));
+        shard1.finalize();
+        shard1.set_status(ShardStatus::Offline);
+
+        let mut search = DistributedSearch::new(DistributedConfig {
+            min_shards: 1, // Require at least 1 shard
+            ..Default::default()
+        });
+        search.add_shard(shard0);
+        search.add_shard(shard1);
+
+        let query = create_test_vec(b"document");
+        let result = search.query(&query, 10);
+
+        // Should fail because no shards are available (all offline)
+        assert!(matches!(
+            result,
+            Err(DistributedError::InsufficientShards { available: 0, .. })
+        ));
+    }
+
+    #[test]
+    fn test_shard_assigner_range_based() {
+        let assigner = ShardAssigner::new(ShardingStrategy::RangeBased, 4);
+
+        // Documents with low IDs should go to early shards
+        let shard_low = assigner.assign(0);
+        let shard_mid = assigner.assign(usize::MAX / 2);
+        let shard_high = assigner.assign(usize::MAX - 1);
+
+        // Low IDs should go to shard 0
+        assert_eq!(shard_low, ShardId(0));
+        // Very high IDs should go to the last shard
+        assert_eq!(shard_high, ShardId(3));
+        // Middle IDs should go to middle shards
+        assert!(shard_mid.0 >= 1 && shard_mid.0 <= 2);
+    }
+
+    #[test]
+    fn test_round_robin_distribution() {
+        // Verify that RoundRobin actually distributes across shards
+        let mut builder =
+            DistributedSearchBuilder::new(3).with_strategy(ShardingStrategy::RoundRobin);
+
+        // Add 9 documents (should be 3 per shard with RoundRobin)
+        for i in 0..9 {
+            builder.add_document(i, create_test_vec(format!("doc{}", i).as_bytes()));
+        }
+
+        // Check that documents are distributed across shards
+        let shard0_count = builder.shards[0].doc_count();
+        let shard1_count = builder.shards[1].doc_count();
+        let shard2_count = builder.shards[2].doc_count();
+
+        // Each shard should have exactly 3 documents with perfect round-robin
+        assert_eq!(shard0_count, 3, "Shard 0 should have 3 documents");
+        assert_eq!(shard1_count, 3, "Shard 1 should have 3 documents");
+        assert_eq!(shard2_count, 3, "Shard 2 should have 3 documents");
+    }
+
+    #[test]
+    fn test_query_k_zero() {
+        let mut builder = DistributedSearchBuilder::new(2);
+        builder.add_document(1, create_test_vec(b"test document"));
+        let search = builder.build();
+
+        let query = create_test_vec(b"test");
+        let (results, stats) = search.query(&query, 0).unwrap();
+
+        // Should return empty results without querying any shards
+        assert!(results.is_empty());
+        assert_eq!(stats.shards_queried, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "num_shards must be greater than 0")]
+    fn test_builder_zero_shards_panics() {
+        let _ = DistributedSearchBuilder::new(0);
+    }
+
+    #[test]
+    fn test_shard_set_status() {
+        let mut shard = Shard::new(ShardId(0));
+        assert_eq!(shard.status, ShardStatus::Healthy);
+
+        shard.set_status(ShardStatus::Degraded);
+        assert_eq!(shard.status, ShardStatus::Degraded);
+        assert!(shard.is_available());
+
+        shard.set_status(ShardStatus::Rebuilding);
+        assert_eq!(shard.status, ShardStatus::Rebuilding);
+        assert!(!shard.is_available());
     }
 }
