@@ -1,6 +1,6 @@
 [package]
 name = "embeddenator-retrieval"
-version = "0.21.0"
+version = "0.22.0"
 edition = "2021"
 authors = ["Tyler Zervas <tz-dev@vectorweight.com>"]
 description = "Semantic retrieval and search operations for VSA-based vector representations"
@@ -20,10 +20,22 @@ sha2 = "0.10"
 # Use 1.x which has compatible serialize/deserialize API
 bincode = ">=1.3, <2.0"
 rayon = ">=1.8, <2.0"
-embeddenator-vsa = { path = "../embeddenator-vsa", version = ">=0.21.0, <1.0.0" }
+embeddenator-vsa = { path = "../embeddenator-vsa" }
 
 [dev-dependencies]
 proptest = "1.0"
 criterion = "0.8"
 tempfile = "3.0"
-embeddenator-fs = { path = "../embeddenator-fs", version = ">=0.24.0, <1.0.0" }
+embeddenator-fs = { path = "../embeddenator-fs" }
+
+[[bench]]
+name = "retrieval"
+harness = false
+
+[[bench]]
+name = "search_performance"
+harness = false
+
+[[bench]]
+name = "query_hierarchical"
+harness = false

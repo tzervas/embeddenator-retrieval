@@ -13,8 +13,16 @@ use embeddenator_vsa::{SparseVec, DIM};
 
 /// Trait for generating candidate IDs from a query vector.
 ///
-/// This is defined locally to avoid cyclic dependencies with embeddenator-interop.
-/// TODO: Consider moving to a shared traits crate to avoid duplication.
+/// # Note on Local Definition
+///
+/// This trait is defined locally to avoid cyclic dependencies with
+/// `embeddenator-interop`. The external `embeddenator_interop::CandidateGenerator`
+/// trait is NOT implemented by types in this module.
+///
+/// **Migration note (v0.22.0):** If your code relied on `TernarySignatureIndex`
+/// implementing `embeddenator_interop::CandidateGenerator`, you will need to
+/// use this local trait instead, or create an adapter. This was necessary to
+/// break the dependency cycle between retrieval and interop crates.
 pub trait CandidateGenerator<V> {
     type Candidate;
 

@@ -242,11 +242,13 @@ impl RetrievalIndex for HierarchicalIndex {
         let beam_width = k.max(10);
         let mut candidate_ids: Vec<usize> = Vec::new();
 
+        // Use configured metric for cluster scoring
+        let metric = self.config.metric;
         if let Some(top_level_clusters) = self.clusters.first() {
             let mut cluster_scores: Vec<(usize, f64)> = top_level_clusters
                 .iter()
                 .enumerate()
-                .map(|(idx, center)| (idx, query.cosine(center)))
+                .map(|(idx, center)| (idx, compute_similarity(query, center, metric)))
                 .collect();
 
             cluster_scores
@@ -262,12 +264,13 @@ impl RetrievalIndex for HierarchicalIndex {
             }
         }
 
-        // Score all candidates
+        // Score all candidates using configured metric
+        let metric = self.config.metric;
         let mut results: Vec<SearchResult> = candidate_ids
             .into_iter()
             .filter_map(|id| {
                 self.vectors.get(&id).map(|vec| {
-                    let score = (query.cosine(vec) * 1000.0) as i32;
+                    let score = (compute_similarity(query, vec, metric) * 1000.0) as i32;
                     SearchResult { id, score }
                 })
             })
@@ -287,13 +290,15 @@ impl RetrievalIndex for HierarchicalIndex {
     ) -> Vec<RerankedResult> {
         let candidates = self.query_top_k(query, candidate_k);
 
+        // Rerank using configured metric
+        let metric = self.config.metric;
         let mut results: Vec<RerankedResult> = candidates
             .into_iter()
             .filter_map(|cand| {
                 self.vectors.get(&cand.id).map(|vec| RerankedResult {
                     id: cand.id,
                     approx_score: cand.score,
-                    cosine: query.cosine(vec),
+                    cosine: compute_similarity(query, vec, metric),
                 })
             })
             .collect();

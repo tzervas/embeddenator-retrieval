@@ -62,6 +62,8 @@
 //! ```
 
 pub mod core;
+pub mod distributed;
+pub mod hnsw;
 pub mod index;
 pub mod retrieval;
 pub mod search;
@@ -69,6 +71,7 @@ pub mod similarity;
 
 // Re-export key types for convenience
 pub use core::{correction, resonator};
+pub use hnsw::{HNSWConfig, HNSWIndex, HNSWStats};
 pub use index::{BruteForceIndex, HierarchicalIndex, IndexConfig, RetrievalIndex};
 pub use retrieval::*;
 pub use search::{
@@ -76,6 +79,13 @@ pub use search::{
     RankedResult, SearchConfig,
 };
 pub use similarity::{compute_similarity, SimilarityMetric};
+
+// Distributed search (#51)
+pub use distributed::{
+    DistributedConfig, DistributedError, DistributedResult, DistributedSearch,
+    DistributedSearchBuilder, QueryStats, Shard, ShardAssigner, ShardId, ShardResult, ShardStatus,
+    ShardingStrategy,
+};
 
 // Convenience wrappers for integration tests
 use embeddenator_vsa::SparseVec;

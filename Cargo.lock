@@ -367,7 +367,7 @@ dependencies = [
 
 [[package]]
 name = "embeddenator-retrieval"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "bincode",
  "criterion",
@@ -382,7 +382,7 @@ dependencies = [
 
 [[package]]
 name = "embeddenator-vsa"
-version = "0.21.1"
+version = "0.22.0"
 dependencies = [
  "libc",
  "rand",

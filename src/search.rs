@@ -23,7 +23,11 @@ pub struct SearchConfig {
     pub metric: SimilarityMetric,
     /// Number of candidates to generate before reranking
     pub candidate_k: usize,
-    /// Beam width for hierarchical search
+    /// Beam width for hierarchical search.
+    ///
+    /// **Note:** This field is reserved for future hierarchical/beam search
+    /// implementations. It is not currently used by the search functions in
+    /// this module. Setting this value has no effect on search behavior.
     pub beam_width: usize,
     /// Enable parallel search
     pub parallel: bool,
