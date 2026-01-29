@@ -75,43 +75,50 @@ pub fn compute_similarity(a: &SparseVec, b: &SparseVec, metric: SimilarityMetric
 /// assert!(dist < 100.0); // Should be very low for identical inputs
 /// ```
 pub fn hamming_distance(a: &SparseVec, b: &SparseVec) -> f64 {
-    // For sparse ternary vectors, we need to count:
-    // 1. Positions in a.pos but not in b.pos
-    // 2. Positions in a.neg but not in b.neg
-    // 3. Positions where a and b have opposite signs
+    // For sparse ternary vectors, count positions where values differ.
+    // Each dimension d has value: +1 if d in pos, -1 if d in neg, else 0.
+    //
+    // A dimension differs if it has different values in a and b:
+    // - a=+1 and b is not +1 (b is 0 or -1)
+    // - a=-1 and b is not -1 (b is 0 or +1)
+    // - b=+1 and a is not +1 (a is 0 or -1)
+    // - b=-1 and a is not -1 (a is 0 or +1)
+    //
+    // We use a HashSet to collect unique differing dimensions, avoiding
+    // double-counting when both sides detect the same differing dimension.
 
-    let mut mismatches = 0usize;
+    use std::collections::HashSet;
+    let mut differing: HashSet<usize> = HashSet::new();
 
-    // Check a.pos against b
+    // Dimensions where a has +1 but b doesn't (b is 0 or -1)
     for &dim in &a.pos {
         if !b.pos.contains(&dim) {
-            mismatches += 1;
+            differing.insert(dim);
         }
     }
 
-    // Check b.pos against a
-    for &dim in &b.pos {
-        if !a.pos.contains(&dim) {
-            mismatches += 1;
-        }
-    }
-
-    // Check a.neg against b
+    // Dimensions where a has -1 but b doesn't (b is 0 or +1)
     for &dim in &a.neg {
         if !b.neg.contains(&dim) {
-            mismatches += 1;
+            differing.insert(dim);
         }
     }
 
-    // Check b.neg against a
+    // Dimensions where b has +1 but a doesn't (a is 0 or -1)
+    for &dim in &b.pos {
+        if !a.pos.contains(&dim) {
+            differing.insert(dim);
+        }
+    }
+
+    // Dimensions where b has -1 but a doesn't (a is 0 or +1)
     for &dim in &b.neg {
         if !a.neg.contains(&dim) {
-            mismatches += 1;
+            differing.insert(dim);
         }
     }
 
-    // Divide by 2 since we double-counted
-    (mismatches / 2) as f64
+    differing.len() as f64
 }
 
 /// Compute Jaccard similarity between two sparse ternary vectors

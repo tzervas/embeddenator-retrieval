@@ -23,27 +23,20 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # Clone path dependencies for dev/feature branches
-      # Main branch should use published crates from crates.io
-      - name: Clone dependency repos (dev branches)
-        if: github.base_ref != 'main' && github.ref != 'refs/heads/main'
+      # Clone path dependencies for all branches.
+      # Note: Cargo.toml uses path deps for local development. When releasing
+      # to crates.io, these are overridden with versioned dependencies.
+      - name: Clone dependency repos
         run: |
           cd ..
           echo "Branch: ${{ github.ref }}, Base: ${{ github.base_ref }}"
-          echo "Cloning path dependencies for development build..."
+          echo "Cloning path dependencies..."
           for repo in embeddenator-vsa embeddenator-io embeddenator-fs; do
             if [ ! -d "$repo" ]; then
               echo "Cloning $repo..."
               git clone --depth 1 https://github.com/tzervas/$repo.git || true
             fi
           done
-
-      # For main branch, verify crates.io deps are available
-      - name: Verify crates.io dependencies (main branch)
-        if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
-        run: |
-          echo "Main branch build - using crates.io dependencies"
-          echo "If this fails, ensure dependencies are published to crates.io"
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
