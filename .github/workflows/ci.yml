@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # Clone path dependencies for all branches.
       # Note: Cargo.toml uses path deps for local development. When releasing
