@@ -85,7 +85,7 @@ fn bench_hierarchical_query_depth(c: &mut Criterion) {
                 // Setup: create structure and build hierarchical index
                 let temp_dir = TempDir::new().unwrap();
                 let _total_files = create_hierarchical_structure(&temp_dir, depth, width, 1024);
-                let mut fs = EmbrFS::new();
+                let mut fs = EmbrFS::new_holographic();
                 fs.ingest_directory(temp_dir.path(), false, &config)
                     .unwrap();
 
@@ -148,7 +148,7 @@ fn bench_hierarchical_query_width(c: &mut Criterion) {
                 // Setup
                 let temp_dir = TempDir::new().unwrap();
                 let _total_files = create_hierarchical_structure(&temp_dir, depth, width, 512);
-                let mut fs = EmbrFS::new();
+                let mut fs = EmbrFS::new_holographic();
                 fs.ingest_directory(temp_dir.path(), false, &config)
                     .unwrap();
 
@@ -198,7 +198,7 @@ fn bench_flat_vs_hierarchical(c: &mut Criterion) {
     // Setup common structure
     let temp_dir = TempDir::new().unwrap();
     let _total_files = create_hierarchical_structure(&temp_dir, 3, 5, 512);
-    let mut fs = EmbrFS::new();
+    let mut fs = EmbrFS::new_holographic();
     fs.ingest_directory(temp_dir.path(), false, &config)
         .unwrap();
 
@@ -263,7 +263,7 @@ fn bench_beam_width_scaling(c: &mut Criterion) {
     // Setup
     let temp_dir = TempDir::new().unwrap();
     let _total_files = create_hierarchical_structure(&temp_dir, 3, 5, 512);
-    let mut fs = EmbrFS::new();
+    let mut fs = EmbrFS::new_holographic();
     fs.ingest_directory(temp_dir.path(), false, &config)
         .unwrap();
 
