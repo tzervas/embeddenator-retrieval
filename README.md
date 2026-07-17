@@ -1,5 +1,10 @@
 # embeddenator-retrieval
 
+<!-- FLEET-BADGES:BEGIN -->
+[![CI](https://github.com/tzervas/embeddenator-retrieval/actions/workflows/fleet-ci.yml/badge.svg?branch=main)](https://github.com/tzervas/embeddenator-retrieval/actions/workflows/fleet-ci.yml?query=branch%3Amain)
+[![Security](https://github.com/tzervas/embeddenator-retrieval/actions/workflows/fleet-security.yml/badge.svg?branch=main)](https://github.com/tzervas/embeddenator-retrieval/actions/workflows/fleet-security.yml?query=branch%3Amain)
+<!-- FLEET-BADGES:END -->
+
 Semantic retrieval and search operations for VSA-based vector representations.
 
 **Independent component** extracted from the Embeddenator monolithic repository. Part of the [Embeddenator workspace](https://github.com/tzervas/embeddenator).
